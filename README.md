@@ -124,6 +124,29 @@ DELETE /api/files/:id
 - Upload files lưu trong folder `uploads/`
 - Trên Render free tier, disk sẽ reset mỗi khi deploy (nên upgrade lên paid hoặc dùng external storage)
 
+## Fallback Web (không phụ thuộc backend)
+
+Khi web chính bị sập, bạn có thể dùng trang fallback đọc trực tiếp từ Supabase Storage bucket.
+
+### File fallback
+
+- `public/bucket-fallback.html`
+
+### Cách dùng
+
+1. Mở trang `bucket-fallback.html` trên hosting tĩnh (hoặc mở local để test).
+2. Nhập:
+   - **Supabase URL**
+   - **Supabase ANON Key** (không dùng service role key)
+   - **Bucket**: `audio`
+3. Bấm **Luu va Ket Noi**.
+4. Trang sẽ tự polling bucket theo chu kỳ (5s/10s/30s/60s) và cập nhật danh sách audio.
+
+### Yêu cầu Supabase
+
+- Bucket `audio` phải public, hoặc policy phải cho phép đọc/list với anon key.
+- Không đưa `SUPABASE_KEY` (service role) lên frontend.
+
 ## Improvements (optional future)
 
 - [ ] Database thay cho JSON (MongoDB)

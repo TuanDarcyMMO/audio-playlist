@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bucket Fallback Player</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --brand: #0b77f2;
+        --ok: #10b981;
+        --danger: #dc2626;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at top right, #dbeafe, var(--bg));
+      }
+
+      .wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        color: var(--brand);
+        font-size: 24px;
+      }
+
+      .row {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 1fr 1fr 1fr auto;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .field label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      button {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        padding: 8px 10px;
+      }
+
+      button {
+        background: var(--brand);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(0.95);
+      }
+
+      .meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .status {
+        font-size: 13px;
+      }
+
+      .status.ok {
+        color: var(--ok);
+      }
+
+      .status.err {
+        color: var(--danger);
+      }
+
+      .list {
+        max-height: 58vh;
+        overflow: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+      }
+
+      .item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #f3f4f6;
+      }
+
+      .item:last-child {
+        border-bottom: none;
+      }
+
+      .name {
+        font-size: 13px;
+        line-height: 1.35;
+        word-break: break-all;
+      }
+
+      .empty {
+        padding: 24px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .player {
+        position: sticky;
+        bottom: 0;
+        background: var(--card);
+        border-top: 1px solid #e5e7eb;
+        padding: 10px;
+      }
+
+      .now {
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: var(--muted);
+      }
+
+      audio {
+        width: 100%;
+      }
+
+      @media (max-width: 720px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Bucket Fallback Player</h1>
+        <div class="row">
+          <div class="field">
+            <label>Supabase URL</label>
+            <input id="url" placeholder="https://xxxx.supabase.co" />
+          </div>
+          <div class="field">
+            <label>Supabase ANON Key</label>
+            <input id="anonKey" placeholder="eyJ..." />
+          </div>
+          <div class="field">
+            <label>Bucket</label>
+            <input id="bucket" value="audio" />
+          </div>
+          <div class="field">
+            <label>Polling</label>
+            <select id="pollSec">
+              <option value="5">5s</option>
+              <option value="10" selected>10s</option>
+              <option value="30">30s</option>
+              <option value="60">60s</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 8px">
+          <button id="saveBtn">Luu va Ket Noi</button>
+          <button id="refreshBtn" type="button">Refresh Now</button>
+        </div>
+        <div class="meta">
+          <div id="status" class="status">Chua ket noi.</div>
+          <div id="count">0 files</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden">
+        <div class="list" id="list">
+          <div class="empty">Chua co du lieu.</div>
+        </div>
+        <div class="player">
+          <div class="now" id="nowPlaying">Chua phat file nao</div>
+          <audio controls id="audio"></audio>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+      const AUDIO_EXT = [".mp3", ".m4a", ".wav", ".ogg", ".aac", ".mp4"];
+
+      const el = {
+        url: document.getElementById("url"),
+        anonKey: document.getElementById("anonKey"),
+        bucket: document.getElementById("bucket"),
+        pollSec: document.getElementById("pollSec"),
+        saveBtn: document.getElementById("saveBtn"),
+        refreshBtn: document.getElementById("refreshBtn"),
+        status: document.getElementById("status"),
+        count: document.getElementById("count"),
+        list: document.getElementById("list"),
+        nowPlaying: document.getElementById("nowPlaying"),
+        audio: document.getElementById("audio"),
+      };
+
+      let client = null;
+      let timerId = null;
+
+      function setStatus(msg, ok) {
+        el.status.textContent = msg;
+        el.status.className = `status ${ok ? "ok" : "err"}`;
+      }
+
+      function saveCfg() {
+        localStorage.setItem(
+          "fallback_cfg",
+          JSON.stringify({
+            url: el.url.value.trim(),
+            anonKey: el.anonKey.value.trim(),
+            bucket: el.bucket.value.trim() || "audio",
+            pollSec: el.pollSec.value,
+          }),
+        );
+      }
+
+      function loadCfg() {
+        try {
+          const cfg = JSON.parse(localStorage.getItem("fallback_cfg") || "{}");
+          el.url.value = cfg.url || "";
+          el.anonKey.value = cfg.anonKey || "";
+          el.bucket.value = cfg.bucket || "audio";
+          el.pollSec.value = cfg.pollSec || "10";
+        } catch {
+          // ignore parse error
+        }
+      }
+
+      async function listRecursive(bucket, prefix = "") {
+        const all = [];
+        const queue = [prefix];
+
+        while (queue.length) {
+          const currentPrefix = queue.shift();
+          const { data, error } = await client.storage.from(bucket).list(currentPrefix, {
+            limit: 1000,
+            offset: 0,
+            sortBy: { column: "created_at", order: "desc" },
+          });
+
+          if (error) throw error;
+
+          for (const item of data || []) {
+            const fullPath = currentPrefix ? `${currentPrefix}${item.name}` : item.name;
+            const isFolder = !item.id && !item.metadata;
+            if (isFolder) {
+              queue.push(`${fullPath}/`);
+            } else {
+              all.push({
+                name: item.name,
+                path: fullPath,
+                size: item.metadata?.size || 0,
+                createdAt: item.created_at || "",
+              });
+            }
+          }
+        }
+
+        return all;
+      }
+
+      function formatSize(bytes) {
+        if (!bytes) return "0 B";
+        const k = 1024;
+        const units = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${(bytes / Math.pow(k, i)).toFixed(1)} ${units[i]}`;
+      }
+
+      function isAudio(path) {
+        const lower = path.toLowerCase();
+        return AUDIO_EXT.some((ext) => lower.endsWith(ext));
+      }
+
+      async function refreshFiles() {
+        if (!client) return;
+
+        const bucket = el.bucket.value.trim() || "audio";
+
+        try {
+          const raw = await listRecursive(bucket);
+          const files = raw
+            .filter((f) => isAudio(f.path))
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+          el.count.textContent = `${files.length} files`;
+
+          if (!files.length) {
+            el.list.innerHTML = '<div class="empty">Bucket khong co audio nao.</div>';
+            setStatus("Ket noi ok, nhung bucket rong.", true);
+            return;
+          }
+
+          const html = files
+            .map((f) => {
+              const { data } = client.storage.from(bucket).getPublicUrl(f.path);
+              const safeName = f.path.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+              const safeUrl = data.publicUrl.replace(/"/g, "&quot;");
+              return `
+                <div class="item">
+                  <div class="name">${safeName}<br><span style="color:#6b7280;font-size:12px">${formatSize(f.size)}</span></div>
+                  <button data-url="${safeUrl}" data-name="${safeName}">Phat</button>
+                </div>
+              `;
+            })
+            .join("");
+
+          el.list.innerHTML = html;
+
+          el.list.querySelectorAll("button[data-url]").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const url = btn.getAttribute("data-url");
+              const name = btn.getAttribute("data-name");
+              el.audio.src = url;
+              el.audio.play().catch((e) => {
+                setStatus(`Khong phat duoc: ${e.message || e}`, false);
+              });
+              el.nowPlaying.textContent = `Dang phat: ${name}`;
+            });
+          });
+
+          setStatus("Da dong bo bucket thanh cong.", true);
+        } catch (err) {
+          setStatus(`Loi dong bo bucket: ${err.message || err}`, false);
+        }
+      }
+
+      function startPolling() {
+        if (timerId) clearInterval(timerId);
+        const sec = Number(el.pollSec.value) || 10;
+        timerId = setInterval(refreshFiles, sec * 1000);
+      }
+
+      function connect() {
+        const url = el.url.value.trim();
+        const anonKey = el.anonKey.value.trim();
+
+        if (!url || !anonKey) {
+          setStatus("Can nhap Supabase URL va ANON key.", false);
+          return;
+        }
+
+        client = createClient(url, anonKey);
+        saveCfg();
+        startPolling();
+        refreshFiles();
+      }
+
+      el.saveBtn.addEventListener("click", connect);
+      el.refreshBtn.addEventListener("click", refreshFiles);
+      el.pollSec.addEventListener("change", () => {
+        saveCfg();
+        startPolling();
+      });
+
+      loadCfg();
+      if (el.url.value && el.anonKey.value) {
+        connect();
+      }
+    </script>
+  </body>
+</html>
