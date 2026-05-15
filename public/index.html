@@ -516,8 +516,59 @@
   </head>
   <body>
     <div class="container with-player">
-      <div class="header">
-        <h1>🎵 Playlist</h1>
+      <div
+        class="header"
+        style="display: flex; flex-direction: column; gap: 8px"
+      >
+        <div style="display: flex; align-items: center; gap: 12px">
+          <h1 style="flex: 1; margin-bottom: 0">🎵 Playlist</h1>
+          <select
+            id="userSelect"
+            style="
+              padding: 4px 8px;
+              border-radius: 6px;
+              border: 1px solid #e5e7eb;
+              font-size: 14px;
+            "
+          >
+            <option value="TuanDarcy">TuanDarcy</option>
+            <option value="Meridiem">Meridiem</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button
+            id="tabUnlistened"
+            class="tab-btn"
+            style="
+              flex: 1;
+              padding: 6px 0;
+              border: none;
+              border-radius: 6px 0 0 6px;
+              background: #e5e7eb;
+              color: #1f2937;
+              font-size: 14px;
+              cursor: pointer;
+            "
+          >
+            Chưa nghe
+          </button>
+          <button
+            id="tabListened"
+            class="tab-btn"
+            style="
+              flex: 1;
+              padding: 6px 0;
+              border: none;
+              border-radius: 0 6px 6px 0;
+              background: #f3f4f6;
+              color: #6b7280;
+              font-size: 14px;
+              cursor: pointer;
+            "
+          >
+            Đã nghe
+          </button>
+        </div>
         <p id="stats">Đang tải...</p>
       </div>
 
@@ -526,11 +577,18 @@
           <div class="upload-btn" id="uploadZone">
             📁 Kéo thả file<br />
             <span style="font-size: 11px; font-weight: normal">(MP3, MP4)</span>
-            <input type="file" id="fileInput" accept=".mp3,.m4a,.wav,.ogg,.aac,.mp4" multiple />
+            <input
+              type="file"
+              id="fileInput"
+              accept=".mp3,.m4a,.wav,.ogg,.aac,.mp4"
+              multiple
+            />
           </div>
           <div class="upload-btn" id="uploadFolder">
             📂 Upload folder<br />
-            <span style="font-size: 11px; font-weight: normal">(Auto filter)</span>
+            <span style="font-size: 11px; font-weight: normal"
+              >(Auto filter)</span
+            >
             <input type="file" id="folderInput" webkitdirectory directory />
           </div>
         </div>
@@ -558,9 +616,16 @@
     <div class="modal-overlay" id="renameModal">
       <div class="modal">
         <h2>📝 Đổi tên file</h2>
-        <input type="text" id="renameInput" class="modal-input" placeholder="Tên file mới" />
+        <input
+          type="text"
+          id="renameInput"
+          class="modal-input"
+          placeholder="Tên file mới"
+        />
         <div class="modal-buttons">
-          <button class="modal-btn secondary" onclick="closeRenameModal()">Hủy</button>
+          <button class="modal-btn secondary" onclick="closeRenameModal()">
+            Hủy
+          </button>
           <button class="modal-btn primary" onclick="saveRename()">Lưu</button>
         </div>
       </div>
@@ -583,6 +648,8 @@
       let currentRenameId = null;
       const GROUPS = ["TuanDarcy", "Meridiem"];
       const AUDIO_EXTENSIONS = [".mp3", ".m4a", ".wav", ".ogg", ".aac", ".mp4"];
+      let currentUser = localStorage.getItem("playlist_user") || "TuanDarcy";
+      let currentTab = localStorage.getItem("playlist_tab") || "unlistened";
 
       // Drag and drop
       dragZone.addEventListener("dragover", (e) => {
@@ -606,7 +673,9 @@
       uploadZone.addEventListener("click", () => fileInput.click());
       uploadFolder.addEventListener("click", () => folderInput.click());
       fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
-      folderInput.addEventListener("change", (e) => handleFiles(e.target.files));
+      folderInput.addEventListener("change", (e) =>
+        handleFiles(e.target.files),
+      );
 
       async function handleFiles(items) {
         dragZone.classList.add("loading");
@@ -661,11 +730,32 @@
           files.push(file);
         } else if (entry.isDirectory) {
           const reader = entry.createReader();
-          const entries = await new Promise((resolve) => reader.readEntries(resolve));
+          const entries = await new Promise((resolve) =>
+            reader.readEntries(resolve),
+          );
           for (let e of entries) {
             await traverseDirectory(e, files);
           }
         }
+      }
+
+      function getUserListened() {
+        try {
+          return (
+            JSON.parse(
+              localStorage.getItem("playlist_listened_" + currentUser) || "{}",
+            ) || {}
+          );
+        } catch {
+          return {};
+        }
+      }
+
+      function setUserListened(obj) {
+        localStorage.setItem(
+          "playlist_listened_" + currentUser,
+          JSON.stringify(obj),
+        );
       }
 
       async function loadPlaylist() {
@@ -673,40 +763,42 @@
           const res = await fetch("/api/files");
           const data = await res.json();
           const files = data.files || [];
+          const userListened = getUserListened();
 
-          const listened = files.filter((f) => f.listened).length;
-          stats.textContent = `${listened}/${files.length} đã nghe`;
+          // Tách file đã nghe/chưa nghe theo user
+          const unlistened = files.filter((f) => !userListened[f.id]);
+          const listened = files.filter((f) => userListened[f.id]);
 
-          if (files.length === 0) {
-            playlist.innerHTML =
-              '<div class="playlist-header">Danh sách audio</div><div class="playlist-empty">Chưa có file nào</div>';
-            return;
-          }
+          stats.textContent = `${listened.length}/${files.length} đã nghe`;
 
           let html = '<div class="playlist-header">Danh sách audio</div>';
-          for (const file of files) {
-            const name = file.id.replace(/^\d+_/, "");
-            const currentGroup = file.group || GROUPS[0];
-
-            html += `
-            <div class="track">
-              <input type="checkbox" class="track-checkbox" ${file.listened ? "checked" : ""} 
-                onchange="toggleListened('${escapeHtml(file.id)}', this.checked)">
-              <div class="track-info">
-                <div class="track-name" onclick="openRenameModal('${escapeHtml(file.id)}', '${escapeHtml(name)}')">${escapeHtml(name)}</div>
-                <div class="track-meta">
-                  <span class="track-size">${formatSize(file.size)}</span>
-                  <select class="track-group-select" onchange="changeGroup('${escapeHtml(file.id)}', this.value)">
-                    ${GROUPS.map((g) => `<option value="${escapeHtml(g)}" ${g === currentGroup ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
-                  </select>
+          let showFiles = currentTab === "unlistened" ? unlistened : listened;
+          if (showFiles.length === 0) {
+            html += `<div class="playlist-empty">${currentTab === "unlistened" ? "Không còn file nào chưa nghe!" : "Chưa có file nào đã nghe."}</div>`;
+          } else {
+            for (const file of showFiles) {
+              const name = file.id.replace(/^\d+_/, "");
+              const currentGroup = file.group || GROUPS[0];
+              html += `
+              <div class="track">
+                <input type="checkbox" class="track-checkbox" ${userListened[file.id] ? "checked" : ""} 
+                  onchange="toggleListened('${escapeHtml(file.id)}', this.checked)">
+                <div class="track-info">
+                  <div class="track-name" onclick="openRenameModal('${escapeHtml(file.id)}', '${escapeHtml(name)}')">${escapeHtml(name)}</div>
+                  <div class="track-meta">
+                    <span class="track-size">${formatSize(file.size)}</span>
+                    <select class="track-group-select" onchange="changeGroup('${escapeHtml(file.id)}', this.value)">
+                      ${GROUPS.map((g) => `<option value="${escapeHtml(g)}" ${g === currentGroup ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+                    </select>
+                  </div>
+                </div>
+                <div class="track-actions">
+                  <button class="btn-play" onclick="playFile('${escapeHtml(file.id)}', '${escapeHtml(name)}', '${escapeHtml(file.url)}')">▶</button>
+                  <button class="btn-small danger" onclick="deleteFile('${escapeHtml(file.id)}')">✕</button>
                 </div>
               </div>
-              <div class="track-actions">
-                <button class="btn-play" onclick="playFile('${escapeHtml(file.id)}', '${escapeHtml(name)}', '${escapeHtml(file.url)}')">▶</button>
-                <button class="btn-small danger" onclick="deleteFile('${escapeHtml(file.id)}')">✕</button>
-              </div>
-            </div>
-          `;
+            `;
+            }
           }
           playlist.innerHTML = html;
         } catch (error) {
@@ -739,13 +831,15 @@
       }
 
       async function toggleListened(id, listened) {
-        const endpoint = listened ? `/api/listen/${id}` : `/api/unlisten/${id}`;
-        try {
-          await fetch(endpoint, { method: "POST" });
-          loadPlaylist();
-        } catch (error) {
-          console.error("Error:", error);
+        // Lưu trạng thái đã nghe vào localStorage theo user
+        const userListened = getUserListened();
+        if (listened) {
+          userListened[id] = true;
+        } else {
+          delete userListened[id];
         }
+        setUserListened(userListened);
+        loadPlaylist();
       }
 
       async function changeGroup(id, group) {
@@ -815,6 +909,43 @@
         }
       }
 
+      // Tab & user select logic
+      document.getElementById("userSelect").value = currentUser;
+      document.getElementById("userSelect").addEventListener("change", (e) => {
+        currentUser = e.target.value;
+        localStorage.setItem("playlist_user", currentUser);
+        loadPlaylist();
+      });
+      document.getElementById("tabUnlistened").addEventListener("click", () => {
+        currentTab = "unlistened";
+        localStorage.setItem("playlist_tab", currentTab);
+        document.getElementById("tabUnlistened").style.background = "#e5e7eb";
+        document.getElementById("tabUnlistened").style.color = "#1f2937";
+        document.getElementById("tabListened").style.background = "#f3f4f6";
+        document.getElementById("tabListened").style.color = "#6b7280";
+        loadPlaylist();
+      });
+      document.getElementById("tabListened").addEventListener("click", () => {
+        currentTab = "listened";
+        localStorage.setItem("playlist_tab", currentTab);
+        document.getElementById("tabListened").style.background = "#e5e7eb";
+        document.getElementById("tabListened").style.color = "#1f2937";
+        document.getElementById("tabUnlistened").style.background = "#f3f4f6";
+        document.getElementById("tabUnlistened").style.color = "#6b7280";
+        loadPlaylist();
+      });
+      // Set initial tab style
+      if (currentTab === "listened") {
+        document.getElementById("tabListened").style.background = "#e5e7eb";
+        document.getElementById("tabListened").style.color = "#1f2937";
+        document.getElementById("tabUnlistened").style.background = "#f3f4f6";
+        document.getElementById("tabUnlistened").style.color = "#6b7280";
+      } else {
+        document.getElementById("tabUnlistened").style.background = "#e5e7eb";
+        document.getElementById("tabUnlistened").style.color = "#1f2937";
+        document.getElementById("tabListened").style.background = "#f3f4f6";
+        document.getElementById("tabListened").style.color = "#6b7280";
+      }
       loadPlaylist();
       setInterval(loadPlaylist, 3000);
     </script>
