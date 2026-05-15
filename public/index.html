@@ -754,14 +754,39 @@
         });
 
         // Upload filtered files
+        let uploadedCount = 0;
+        let duplicateCount = 0;
+        let failedCount = 0;
         for (const file of audioFiles) {
           const formData = new FormData();
           formData.append("audio", file);
           try {
-            await fetch("/api/upload", { method: "POST", body: formData });
+            const res = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+            if (!res.ok) {
+              failedCount += 1;
+              continue;
+            }
+            const result = await res.json();
+            if (result.duplicate) {
+              duplicateCount += 1;
+            } else if (result.success) {
+              uploadedCount += 1;
+            } else {
+              failedCount += 1;
+            }
           } catch (error) {
+            failedCount += 1;
             console.error("Upload error:", error);
           }
+        }
+
+        if (audioFiles.length > 0) {
+          alert(
+            `Upload xong: ${uploadedCount} file mới, ${duplicateCount} file trùng đã bỏ qua, ${failedCount} lỗi.`,
+          );
         }
 
         dragZone.classList.remove("loading");
