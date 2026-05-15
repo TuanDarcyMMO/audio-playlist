@@ -601,10 +601,49 @@
         </div>
       </div>
 
+      <div
+        style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px"
+      >
+        <button
+          id="deleteSelectedBtn"
+          class="btn-small danger"
+          style="min-width: 90px"
+        >
+          Xóa đã chọn
+        </button>
+        <button
+          id="deleteAllBtn"
+          class="btn-small danger"
+          style="min-width: 90px"
+        >
+          Xóa tất cả
+        </button>
+        <span style="flex: 1"></span>
+        <label style="font-size: 13px; color: #6b7280"
+          >Hiển thị:
+          <select
+            id="pageSizeSelect"
+            style="padding: 2px 8px; border-radius: 4px"
+          >
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+      </div>
       <div class="playlist" id="playlist">
         <div class="playlist-header">Danh sách audio</div>
         <div class="playlist-empty">Chưa có file nào</div>
       </div>
+      <div
+        id="pagination"
+        style="
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+          margin: 12px 0 0 0;
+        "
+      ></div>
     </div>
 
     <div class="player" id="player" style="display: none">
@@ -650,6 +689,13 @@
       const AUDIO_EXTENSIONS = [".mp3", ".m4a", ".wav", ".ogg", ".aac", ".mp4"];
       let currentUser = localStorage.getItem("playlist_user") || "TuanDarcy";
       let currentTab = localStorage.getItem("playlist_tab") || "unlistened";
+      let pageSize = parseInt(
+        localStorage.getItem("playlist_pageSize") || "10",
+      );
+      let currentPage = 1;
+      let lastFiles = [];
+      let lastShowFiles = [];
+      let selectedIds = new Set();
 
       // Drag and drop
       dragZone.addEventListener("dragover", (e) => {
@@ -763,6 +809,7 @@
           const res = await fetch("/api/files");
           const data = await res.json();
           const files = data.files || [];
+          lastFiles = files;
           const userListened = getUserListened();
 
           // Tách file đã nghe/chưa nghe theo user
@@ -771,16 +818,29 @@
 
           stats.textContent = `${listened.length}/${files.length} đã nghe`;
 
-          let html = '<div class="playlist-header">Danh sách audio</div>';
           let showFiles = currentTab === "unlistened" ? unlistened : listened;
-          if (showFiles.length === 0) {
+          lastShowFiles = showFiles;
+          // Phân trang
+          const totalPages = Math.max(
+            1,
+            Math.ceil(showFiles.length / pageSize),
+          );
+          if (currentPage > totalPages) currentPage = totalPages;
+          const startIdx = (currentPage - 1) * pageSize;
+          const endIdx = startIdx + pageSize;
+          const pageFiles = showFiles.slice(startIdx, endIdx);
+
+          let html = '<div class="playlist-header">Danh sách audio</div>';
+          if (pageFiles.length === 0) {
             html += `<div class="playlist-empty">${currentTab === "unlistened" ? "Không còn file nào chưa nghe!" : "Chưa có file nào đã nghe."}</div>`;
           } else {
-            for (const file of showFiles) {
+            html += `<div style='padding:4px 16px 4px 8px;'><input type='checkbox' id='selectAllBox' ${pageFiles.every((f) => selectedIds.has(f.id)) && pageFiles.length > 0 ? "checked" : ""}/> <label for='selectAllBox' style='font-size:13px;color:#6b7280;'>Chọn tất cả trang này</label></div>`;
+            for (const file of pageFiles) {
               const name = file.id.replace(/^\d+_/, "");
               const currentGroup = file.group || GROUPS[0];
               html += `
               <div class="track">
+                <input type="checkbox" class="track-checkbox select-item" data-id="${escapeHtml(file.id)}" ${selectedIds.has(file.id) ? "checked" : ""} style="margin-right:4px;">
                 <input type="checkbox" class="track-checkbox" ${userListened[file.id] ? "checked" : ""} 
                   onchange="toggleListened('${escapeHtml(file.id)}', this.checked)">
                 <div class="track-info">
@@ -801,12 +861,49 @@
             }
           }
           playlist.innerHTML = html;
+          // Pagination
+          renderPagination(totalPages);
+          // Checkbox logic
+          setTimeout(() => {
+            const selectAllBox = document.getElementById("selectAllBox");
+            if (selectAllBox) {
+              selectAllBox.addEventListener("change", function () {
+                const pageIds = pageFiles.map((f) => f.id);
+                if (this.checked) pageIds.forEach((id) => selectedIds.add(id));
+                else pageIds.forEach((id) => selectedIds.delete(id));
+                loadPlaylist();
+              });
+            }
+            document.querySelectorAll(".select-item").forEach((cb) => {
+              cb.addEventListener("change", function () {
+                if (this.checked) selectedIds.add(this.dataset.id);
+                else selectedIds.delete(this.dataset.id);
+              });
+            });
+          }, 0);
         } catch (error) {
+          playlist.innerHTML = `<div class='playlist-empty' style='color:#dc2626;'>Lỗi tải danh sách: ${error.message}</div>`;
           console.error("Load error:", error);
-          playlist.innerHTML =
-            '<div class="playlist-empty">Lỗi tải danh sách</div>';
         }
       }
+
+      function renderPagination(totalPages) {
+        const pag = document.getElementById("pagination");
+        if (!pag) return;
+        if (totalPages <= 1) {
+          pag.innerHTML = "";
+          return;
+        }
+        let html = "";
+        for (let i = 1; i <= totalPages; ++i) {
+          html += `<button class='btn-small' style='${i === currentPage ? "background:#0b77f2;color:#fff;" : ""}' onclick='window.setPage(${i})'>${i}</button>`;
+        }
+        pag.innerHTML = html;
+      }
+      window.setPage = function (n) {
+        currentPage = n;
+        loadPlaylist();
+      };
 
       function escapeHtml(text) {
         const div = document.createElement("div");
@@ -825,9 +922,17 @@
       function playFile(id, name, url) {
         playerTitle.textContent = name;
         audioPlayer.src = url;
-        audioPlayer.play();
+        audioPlayer.play().catch((err) => {
+          document.getElementById("playerStats").textContent =
+            "Lỗi phát nhạc: " + (err && err.message ? err.message : err);
+        });
         player.style.display = "block";
         audioPlayer.onended = () => toggleListened(id, true);
+        audioPlayer.onerror = function () {
+          document.getElementById("playerStats").textContent =
+            "Lỗi phát nhạc: Không thể phát file này. Có thể file bị lỗi, không tồn tại, hoặc trình duyệt không hỗ trợ.";
+        };
+        document.getElementById("playerStats").textContent = "";
       }
 
       async function toggleListened(id, listened) {
@@ -914,6 +1019,8 @@
       document.getElementById("userSelect").addEventListener("change", (e) => {
         currentUser = e.target.value;
         localStorage.setItem("playlist_user", currentUser);
+        selectedIds.clear();
+        currentPage = 1;
         loadPlaylist();
       });
       document.getElementById("tabUnlistened").addEventListener("click", () => {
@@ -923,6 +1030,8 @@
         document.getElementById("tabUnlistened").style.color = "#1f2937";
         document.getElementById("tabListened").style.background = "#f3f4f6";
         document.getElementById("tabListened").style.color = "#6b7280";
+        selectedIds.clear();
+        currentPage = 1;
         loadPlaylist();
       });
       document.getElementById("tabListened").addEventListener("click", () => {
@@ -932,8 +1041,48 @@
         document.getElementById("tabListened").style.color = "#1f2937";
         document.getElementById("tabUnlistened").style.background = "#f3f4f6";
         document.getElementById("tabUnlistened").style.color = "#6b7280";
+        selectedIds.clear();
+        currentPage = 1;
         loadPlaylist();
       });
+      document.getElementById("pageSizeSelect").value = pageSize;
+      document
+        .getElementById("pageSizeSelect")
+        .addEventListener("change", (e) => {
+          pageSize = parseInt(e.target.value);
+          localStorage.setItem("playlist_pageSize", pageSize);
+          currentPage = 1;
+          loadPlaylist();
+        });
+      document
+        .getElementById("deleteSelectedBtn")
+        .addEventListener("click", async () => {
+          if (selectedIds.size === 0) {
+            alert("Chưa chọn file nào!");
+            return;
+          }
+          if (!confirm("Xóa tất cả file đã chọn?")) return;
+          for (const id of Array.from(selectedIds)) {
+            try {
+              await fetch(`/api/files/${id}`, { method: "DELETE" });
+            } catch {}
+          }
+          selectedIds.clear();
+          loadPlaylist();
+        });
+      document
+        .getElementById("deleteAllBtn")
+        .addEventListener("click", async () => {
+          if (!lastShowFiles.length) return;
+          if (!confirm("Xóa tất cả file trong tab này?")) return;
+          for (const f of lastShowFiles) {
+            try {
+              await fetch(`/api/files/${f.id}`, { method: "DELETE" });
+            } catch {}
+          }
+          selectedIds.clear();
+          loadPlaylist();
+        });
       // Set initial tab style
       if (currentTab === "listened") {
         document.getElementById("tabListened").style.background = "#e5e7eb";
