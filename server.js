@@ -247,22 +247,26 @@ app.post("/api/group/:id", (req, res) => {
 });
 
 // Delete file
-app.delete("/api/files/:id", (req, res) => {
-  const { id } = req.params;
-  const filePath = path.join(uploadsDir, id);
+app.delete("/api/files/:id", async (req, res) => {
+  const id = decodeURIComponent(req.params.id);
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" });
+  try {
+    const bucket = process.env.SUPABASE_BUCKET || "audio";
+    const { error } = await supabase.storage.from(bucket).remove([id]);
+    if (error) {
+      return res.status(404).json({ error: error.message || "File not found" });
+    }
+
+    const metadata = readMetadata();
+    delete metadata.listened[id];
+    delete metadata.groups[id];
+    delete metadata.hashes[id];
+    writeMetadata(metadata);
+
+    res.json({ success: true, id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-
-  fs.unlinkSync(filePath);
-  const metadata = readMetadata();
-  delete metadata.listened[id];
-  delete metadata.groups[id];
-  delete metadata.hashes[id];
-  writeMetadata(metadata);
-
-  res.json({ success: true, id });
 });
 
 // Rename file

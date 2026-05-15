@@ -977,7 +977,7 @@
 
       async function changeGroup(id, group) {
         try {
-          await fetch(`/api/group/${id}`, {
+          await fetch(`/api/group/${encodeURIComponent(id)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ group }),
@@ -1009,7 +1009,7 @@
         }
 
         try {
-          await fetch(`/api/rename/${currentRenameId}`, {
+          await fetch(`/api/rename/${encodeURIComponent(currentRenameId)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ newName: renameInput.value.trim() }),
@@ -1034,7 +1034,9 @@
       async function deleteFile(id) {
         if (confirm("Xóa file này?")) {
           try {
-            await fetch(`/api/files/${id}`, { method: "DELETE" });
+            await fetch(`/api/files/${encodeURIComponent(id)}`, {
+              method: "DELETE",
+            });
             loadPlaylist();
           } catch (error) {
             console.error("Error:", error);
@@ -1092,7 +1094,9 @@
           if (!confirm("Xóa tất cả file đã chọn?")) return;
           for (const id of Array.from(selectedIds)) {
             try {
-              await fetch(`/api/files/${id}`, { method: "DELETE" });
+              await fetch(`/api/files/${encodeURIComponent(id)}`, {
+                method: "DELETE",
+              });
             } catch {}
           }
           selectedIds.clear();
@@ -1105,7 +1109,9 @@
           if (!confirm("Xóa tất cả file trong tab này?")) return;
           for (const f of lastShowFiles) {
             try {
-              await fetch(`/api/files/${f.id}`, { method: "DELETE" });
+              await fetch(`/api/files/${encodeURIComponent(f.id)}`, {
+                method: "DELETE",
+              });
             } catch {}
           }
           selectedIds.clear();
