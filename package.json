@@ -8,7 +8,11 @@
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
-  "keywords": ["audio", "playlist", "express"],
+  "keywords": [
+    "audio",
+    "playlist",
+    "express"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {

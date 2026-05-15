@@ -1,406 +1,409 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Audio Playlist</title>
-  <style>
-    :root {
-      --primary: #0b77f2;
-      --bg: #f0f2f5;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --success: #10b981;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
-      background: linear-gradient(135deg, var(--bg) 0%, #e5e7eb 100%);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-
-    .header {
-      background: var(--card);
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .header h1 {
-      margin: 0 0 8px 0;
-      font-size: 24px;
-      color: var(--primary);
-    }
-
-    .header p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .upload-zone {
-      background: var(--card);
-      border: 2px dashed var(--primary);
-      border-radius: 12px;
-      padding: 32px 16px;
-      text-align: center;
-      cursor: pointer;
-      margin-bottom: 20px;
-      transition: all 0.2s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .upload-zone:hover {
-      border-color: #0856c0;
-      background: #f8faff;
-    }
-
-    .upload-zone.dragover {
-      border-color: var(--success);
-      background: #f0fdf4;
-    }
-
-    .upload-zone input {
-      display: none;
-    }
-
-    .upload-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
-    .upload-text {
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .upload-text strong {
-      color: var(--text);
-    }
-
-    .playlist {
-      background: var(--card);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .playlist-header {
-      background: #f9fafb;
-      padding: 12px 16px;
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--muted);
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .playlist-empty {
-      padding: 32px 16px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .track {
-      padding: 12px 16px;
-      border-bottom: 1px solid #f3f4f6;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      transition: background 0.2s;
-    }
-
-    .track:last-child {
-      border-bottom: none;
-    }
-
-    .track:hover {
-      background: #f9fafb;
-    }
-
-    .track-checkbox {
-      width: 20px;
-      height: 20px;
-      cursor: pointer;
-      accent-color: var(--primary);
-    }
-
-    .track-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .track-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-      word-break: break-word;
-      margin-bottom: 4px;
-    }
-
-    .track-meta {
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .track-group {
-      display: inline-block;
-      padding: 2px 6px;
-      background: #eff6ff;
-      color: var(--primary);
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      border: 1px solid #bfdbfe;
-      transition: all 0.2s;
-    }
-
-    .track-group:hover {
-      background: #dbeafe;
-    }
-
-    .track-group-input {
-      width: 100px;
-      padding: 2px 6px;
-      font-size: 11px;
-      border: 1px solid var(--primary);
-      border-radius: 4px;
-      outline: none;
-    }
-
-    .track-group-input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(11, 119, 242, 0.1);
-    }
-
-    .track-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-small {
-      padding: 4px 8px;
-      font-size: 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: #e5e7eb;
-      color: var(--text);
-    }
-
-    .btn-small:hover {
-      background: #d1d5db;
-    }
-
-    .btn-small.danger {
-      background: #fee2e2;
-      color: #dc2626;
-    }
-
-    .btn-small.danger:hover {
-      background: #fecaca;
-    }
-
-    .btn-play {
-      padding: 4px 8px;
-      font-size: 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      background: var(--primary);
-      color: white;
-      transition: all 0.2s;
-    }
-
-    .btn-play:hover {
-      background: #0856c0;
-    }
-
-    .player {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--card);
-      border-top: 1px solid #e5e7eb;
-      padding: 12px;
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
-      z-index: 100;
-    }
-
-    .player audio {
-      width: 100%;
-      max-width: 100%;
-    }
-
-    .player-title {
-      font-size: 12px;
-      font-weight: 500;
-      margin-bottom: 8px;
-      color: var(--text);
-      word-break: break-word;
-      max-height: 32px;
-      overflow: hidden;
-    }
-
-    .container.with-player {
-      padding-bottom: 140px;
-    }
-
-    .stats {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #e5e7eb;
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 12px;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Playlist</title>
+    <style>
+      :root {
+        --primary: #0b77f2;
+        --bg: #f0f2f5;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --success: #10b981;
       }
 
-      .header {
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans",
+          sans-serif;
+        background: linear-gradient(135deg, var(--bg) 0%, #e5e7eb 100%);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
         padding: 16px;
       }
 
+      .header {
+        background: var(--card);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
       .header h1 {
-        font-size: 20px;
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        color: var(--primary);
       }
 
-      .track {
-        padding: 10px 12px;
-        gap: 10px;
-      }
-
-      .track-name {
-        font-size: 12px;
+      .header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
       }
 
       .upload-zone {
-        padding: 24px 12px;
+        background: var(--card);
+        border: 2px dashed var(--primary);
+        border-radius: 12px;
+        padding: 32px 16px;
+        text-align: center;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
-    }
 
-    .loading {
-      opacity: 0.5;
-      pointer-events: none;
-    }
-  </style>
-</head>
-<body>
-  <div class="container with-player">
-    <div class="header">
-      <h1>🎵 Playlist</h1>
-      <p id="stats">Đang tải...</p>
-    </div>
+      .upload-zone:hover {
+        border-color: #0856c0;
+        background: #f8faff;
+      }
 
-    <div class="upload-zone" id="uploadZone">
-      <div class="upload-icon">📁</div>
-      <div class="upload-text">
-        <strong>Kéo thả audio vào đây</strong><br>
-        hoặc click để chọn file (MP3, WAV, M4A, AAC)
+      .upload-zone.dragover {
+        border-color: var(--success);
+        background: #f0fdf4;
+      }
+
+      .upload-zone input {
+        display: none;
+      }
+
+      .upload-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+      }
+
+      .upload-text {
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .upload-text strong {
+        color: var(--text);
+      }
+
+      .playlist {
+        background: var(--card);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      .playlist-header {
+        background: #f9fafb;
+        padding: 12px 16px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--muted);
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .playlist-empty {
+        padding: 32px 16px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .track {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        transition: background 0.2s;
+      }
+
+      .track:last-child {
+        border-bottom: none;
+      }
+
+      .track:hover {
+        background: #f9fafb;
+      }
+
+      .track-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: var(--primary);
+      }
+
+      .track-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .track-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        word-break: break-word;
+        margin-bottom: 4px;
+      }
+
+      .track-meta {
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .track-group {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #eff6ff;
+        color: var(--primary);
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        border: 1px solid #bfdbfe;
+        transition: all 0.2s;
+      }
+
+      .track-group:hover {
+        background: #dbeafe;
+      }
+
+      .track-group-input {
+        width: 100px;
+        padding: 2px 6px;
+        font-size: 11px;
+        border: 1px solid var(--primary);
+        border-radius: 4px;
+        outline: none;
+      }
+
+      .track-group-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(11, 119, 242, 0.1);
+      }
+
+      .track-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn-small {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #e5e7eb;
+        color: var(--text);
+      }
+
+      .btn-small:hover {
+        background: #d1d5db;
+      }
+
+      .btn-small.danger {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+
+      .btn-small.danger:hover {
+        background: #fecaca;
+      }
+
+      .btn-play {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        background: var(--primary);
+        color: white;
+        transition: all 0.2s;
+      }
+
+      .btn-play:hover {
+        background: #0856c0;
+      }
+
+      .player {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--card);
+        border-top: 1px solid #e5e7eb;
+        padding: 12px;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+        z-index: 100;
+      }
+
+      .player audio {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .player-title {
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--text);
+        word-break: break-word;
+        max-height: 32px;
+        overflow: hidden;
+      }
+
+      .container.with-player {
+        padding-bottom: 140px;
+      }
+
+      .stats {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          padding: 12px;
+        }
+
+        .header {
+          padding: 16px;
+        }
+
+        .header h1 {
+          font-size: 20px;
+        }
+
+        .track {
+          padding: 10px 12px;
+          gap: 10px;
+        }
+
+        .track-name {
+          font-size: 12px;
+        }
+
+        .upload-zone {
+          padding: 24px 12px;
+        }
+      }
+
+      .loading {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container with-player">
+      <div class="header">
+        <h1>🎵 Playlist</h1>
+        <p id="stats">Đang tải...</p>
       </div>
-      <input type="file" id="fileInput" accept="audio/*" multiple>
+
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">
+          <strong>Kéo thả audio vào đây</strong><br />
+          hoặc click để chọn file (MP3, WAV, M4A, AAC)
+        </div>
+        <input type="file" id="fileInput" accept="audio/*" multiple />
+      </div>
+
+      <div class="playlist" id="playlist">
+        <div class="playlist-header">Danh sách audio</div>
+        <div class="playlist-empty">Chưa có file nào</div>
+      </div>
     </div>
 
-    <div class="playlist" id="playlist">
-      <div class="playlist-header">Danh sách audio</div>
-      <div class="playlist-empty">Chưa có file nào</div>
+    <div class="player" id="player" style="display: none">
+      <div class="player-title" id="playerTitle"></div>
+      <audio controls id="audioPlayer"></audio>
+      <div class="stats" id="playerStats"></div>
     </div>
-  </div>
 
-  <div class="player" id="player" style="display: none;">
-    <div class="player-title" id="playerTitle"></div>
-    <audio controls id="audioPlayer"></audio>
-    <div class="stats" id="playerStats"></div>
-  </div>
+    <script>
+      const uploadZone = document.getElementById("uploadZone");
+      const fileInput = document.getElementById("fileInput");
+      const playlist = document.getElementById("playlist");
+      const player = document.getElementById("player");
+      const audioPlayer = document.getElementById("audioPlayer");
+      const playerTitle = document.getElementById("playerTitle");
+      const stats = document.getElementById("stats");
+      const playerStats = document.getElementById("playerStats");
 
-  <script>
-    const uploadZone = document.getElementById('uploadZone');
-    const fileInput = document.getElementById('fileInput');
-    const playlist = document.getElementById('playlist');
-    const player = document.getElementById('player');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const playerTitle = document.getElementById('playerTitle');
-    const stats = document.getElementById('stats');
-    const playerStats = document.getElementById('playerStats');
+      // Drag and drop
+      uploadZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadZone.classList.add("dragover");
+      });
 
-    // Drag and drop
-    uploadZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      uploadZone.classList.add('dragover');
-    });
+      uploadZone.addEventListener("dragleave", () => {
+        uploadZone.classList.remove("dragover");
+      });
 
-    uploadZone.addEventListener('dragleave', () => {
-      uploadZone.classList.remove('dragover');
-    });
+      uploadZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove("dragover");
+        handleFiles(e.dataTransfer.files);
+      });
 
-    uploadZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      uploadZone.classList.remove('dragover');
-      handleFiles(e.dataTransfer.files);
-    });
+      uploadZone.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
 
-    uploadZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-    async function handleFiles(files) {
-      uploadZone.classList.add('loading');
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('audio', file);
-        try {
-          await fetch('/api/upload', { method: 'POST', body: formData });
-        } catch (error) {
-          console.error('Upload error:', error);
-          alert('Lỗi: ' + error.message);
-        }
-      }
-      uploadZone.classList.remove('loading');
-      loadPlaylist();
-    }
-
-    async function loadPlaylist() {
-      try {
-        const res = await fetch('/api/files');
-        const data = await res.json();
-        const files = data.files || [];
-
-        const listened = files.filter(f => f.listened).length;
-        stats.textContent = `${listened}/${files.length} đã nghe`;
-
-        if (files.length === 0) {
-          playlist.innerHTML = '<div class="playlist-header">Danh sách audio</div><div class="playlist-empty">Chưa có file nào</div>';
-          return;
-        }
-
-        let html = '<div class="playlist-header">Danh sách audio</div>';
+      async function handleFiles(files) {
+        uploadZone.classList.add("loading");
         for (const file of files) {
-          const name = file.id.replace(/^\d+_/, '');
-          html += `
+          const formData = new FormData();
+          formData.append("audio", file);
+          try {
+            await fetch("/api/upload", { method: "POST", body: formData });
+          } catch (error) {
+            console.error("Upload error:", error);
+            alert("Lỗi: " + error.message);
+          }
+        }
+        uploadZone.classList.remove("loading");
+        loadPlaylist();
+      }
+
+      async function loadPlaylist() {
+        try {
+          const res = await fetch("/api/files");
+          const data = await res.json();
+          const files = data.files || [];
+
+          const listened = files.filter((f) => f.listened).length;
+          stats.textContent = `${listened}/${files.length} đã nghe`;
+
+          if (files.length === 0) {
+            playlist.innerHTML =
+              '<div class="playlist-header">Danh sách audio</div><div class="playlist-empty">Chưa có file nào</div>';
+            return;
+          }
+
+          let html = '<div class="playlist-header">Danh sách audio</div>';
+          for (const file of files) {
+            const name = file.id.replace(/^\d+_/, "");
+            html += `
             <div class="track">
-              <input type="checkbox" class="track-checkbox" ${file.listened ? 'checked' : ''} 
+              <input type="checkbox" class="track-checkbox" ${file.listened ? "checked" : ""} 
                 onchange="toggleListened('${escapeHtml(file.id)}', this.checked)">
               <div class="track-info">
                 <div class="track-name">${escapeHtml(name)}</div>
@@ -415,94 +418,95 @@
               </div>
             </div>
           `;
+          }
+          playlist.innerHTML = html;
+        } catch (error) {
+          console.error("Load error:", error);
+          playlist.innerHTML =
+            '<div class="playlist-empty">Lỗi tải danh sách</div>';
         }
-        playlist.innerHTML = html;
-      } catch (error) {
-        console.error('Load error:', error);
-        playlist.innerHTML = '<div class="playlist-empty">Lỗi tải danh sách</div>';
       }
-    }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    function formatSize(bytes) {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return Math.round(bytes / Math.pow(k, i) * 10) / 10 + ' ' + sizes[i];
-    }
-
-    function playFile(id, name, url) {
-      playerTitle.textContent = name;
-      audioPlayer.src = url;
-      audioPlayer.play();
-      player.style.display = 'block';
-      audioPlayer.onended = () => toggleListened(id, true);
-    }
-
-    async function toggleListened(id, listened) {
-      const endpoint = listened ? `/api/listen/${id}` : `/api/unlisten/${id}`;
-      try {
-        await fetch(endpoint, { method: 'POST' });
-        loadPlaylist();
-      } catch (error) {
-        console.error('Error:', error);
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
       }
-    }
 
-    function editGroup(event, id) {
-      event.stopPropagation();
-      const span = event.target;
-      const currentGroup = span.textContent;
-      const input = document.createElement('input');
-      input.className = 'track-group-input';
-      input.type = 'text';
-      input.value = currentGroup;
-      input.maxLength = 30;
+      function formatSize(bytes) {
+        if (bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 10) / 10 + " " + sizes[i];
+      }
 
-      const save = async () => {
-        const newGroup = input.value.trim() || 'default';
+      function playFile(id, name, url) {
+        playerTitle.textContent = name;
+        audioPlayer.src = url;
+        audioPlayer.play();
+        player.style.display = "block";
+        audioPlayer.onended = () => toggleListened(id, true);
+      }
+
+      async function toggleListened(id, listened) {
+        const endpoint = listened ? `/api/listen/${id}` : `/api/unlisten/${id}`;
         try {
-          await fetch(`/api/group/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ group: newGroup })
-          });
+          await fetch(endpoint, { method: "POST" });
           loadPlaylist();
         } catch (error) {
-          console.error('Error:', error);
-        }
-      };
-
-      input.onblur = save;
-      input.onkeydown = (e) => {
-        if (e.key === 'Enter') save();
-        if (e.key === 'Escape') loadPlaylist();
-      };
-
-      span.replaceWith(input);
-      input.focus();
-      input.select();
-    }
-
-    async function deleteFile(id) {
-      if (confirm('Xóa file này?')) {
-        try {
-          await fetch(`/api/files/${id}`, { method: 'DELETE' });
-          loadPlaylist();
-        } catch (error) {
-          console.error('Error:', error);
+          console.error("Error:", error);
         }
       }
-    }
 
-    loadPlaylist();
-    setInterval(loadPlaylist, 3000);
-  </script>
-</body>
+      function editGroup(event, id) {
+        event.stopPropagation();
+        const span = event.target;
+        const currentGroup = span.textContent;
+        const input = document.createElement("input");
+        input.className = "track-group-input";
+        input.type = "text";
+        input.value = currentGroup;
+        input.maxLength = 30;
+
+        const save = async () => {
+          const newGroup = input.value.trim() || "default";
+          try {
+            await fetch(`/api/group/${id}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ group: newGroup }),
+            });
+            loadPlaylist();
+          } catch (error) {
+            console.error("Error:", error);
+          }
+        };
+
+        input.onblur = save;
+        input.onkeydown = (e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") loadPlaylist();
+        };
+
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+      }
+
+      async function deleteFile(id) {
+        if (confirm("Xóa file này?")) {
+          try {
+            await fetch(`/api/files/${id}`, { method: "DELETE" });
+            loadPlaylist();
+          } catch (error) {
+            console.error("Error:", error);
+          }
+        }
+      }
+
+      loadPlaylist();
+      setInterval(loadPlaylist, 3000);
+    </script>
+  </body>
 </html>

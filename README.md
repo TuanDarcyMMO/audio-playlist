@@ -72,6 +72,7 @@ git push -u origin main
 ## API Endpoints
 
 ### Upload
+
 ```
 POST /api/upload
 Content-Type: multipart/form-data
@@ -79,22 +80,26 @@ Body: audio (file)
 ```
 
 ### List files
+
 ```
 GET /api/files
 Response: { files: [...] }
 ```
 
 ### Mark listened
+
 ```
 POST /api/listen/:id
 ```
 
 ### Unmark listened
+
 ```
 POST /api/unlisten/:id
 ```
 
 ### Set group
+
 ```
 POST /api/group/:id
 Content-Type: application/json
@@ -102,6 +107,7 @@ Body: { "group": "Tên group" }
 ```
 
 ### Delete file
+
 ```
 DELETE /api/files/:id
 ```
@@ -109,7 +115,7 @@ DELETE /api/files/:id
 ## Limits
 
 - **Max file size**: 50MB
-- **Supported formats**: MP3, WAV, M4A, AAC, OGG
+- **Supported formats**: MP3, WAV, M4A, AAC, OGG, MP4
 - **Free tier Render**: ~500MB disk (có thể upgrade)
 
 ## Notes
