@@ -923,14 +923,17 @@
         playerTitle.textContent = name;
         audioPlayer.src = url;
         audioPlayer.play().catch((err) => {
-          document.getElementById("playerStats").textContent =
-            "Lỗi phát nhạc: " + (err && err.message ? err.message : err);
+          document.getElementById("playerStats").innerHTML =
+            "Lỗi phát nhạc: " +
+            (err && err.message ? err.message : err) +
+            `<br><span style='font-size:11px'>URL: <a href='${url}' target='_blank' style='color:#0b77f2'>${url}</a></span>`;
         });
         player.style.display = "block";
         audioPlayer.onended = () => toggleListened(id, true);
         audioPlayer.onerror = function () {
-          document.getElementById("playerStats").textContent =
-            "Lỗi phát nhạc: Không thể phát file này. Có thể file bị lỗi, không tồn tại, hoặc trình duyệt không hỗ trợ.";
+          document.getElementById("playerStats").innerHTML =
+            "Lỗi phát nhạc: Không thể phát file này. Có thể file bị lỗi, không tồn tại, hoặc trình duyệt không hỗ trợ." +
+            `<br><span style='font-size:11px'>URL: <a href='${url}' target='_blank' style='color:#0b77f2'>${url}</a></span>`;
         };
         document.getElementById("playerStats").textContent = "";
       }

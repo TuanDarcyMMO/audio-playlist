@@ -4,6 +4,7 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import supabase from "./supabase.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -76,44 +77,68 @@ const upload = multer({
 
 // API Routes
 
-// Upload audio
-app.post("/api/upload", upload.single("audio"), (req, res) => {
+// Upload audio to Supabase Storage
+app.post("/api/upload", upload.single("audio"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file uploaded" });
   }
-  res.json({
-    success: true,
-    file: {
-      id: req.file.filename,
-      originalName: req.file.originalname,
-      size: req.file.size,
-      url: `/uploads/${req.file.filename}`,
-    },
-  });
+  try {
+    // Upload to Supabase Storage
+    const bucket = process.env.SUPABASE_BUCKET || "audio";
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const supaPath = req.file.filename;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(supaPath, fileBuffer, {
+        contentType: req.file.mimetype,
+        upsert: true,
+      });
+    // Remove local file after upload
+    fs.unlinkSync(req.file.path);
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(supaPath);
+    res.json({
+      success: true,
+      file: {
+        id: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        url: publicUrlData.publicUrl,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // List all files
-app.get("/api/files", (req, res) => {
+// List all files from Supabase Storage
+app.get("/api/files", async (req, res) => {
   try {
-    const files = fs.readdirSync(uploadsDir);
+    const bucket = process.env.SUPABASE_BUCKET || "audio";
+    const { data: list, error } = await supabase.storage.from(bucket).list();
+    if (error) return res.status(500).json({ error: error.message });
     const metadata = readMetadata();
-
-    const fileList = files.map((filename) => {
-      const filePath = path.join(uploadsDir, filename);
-      const stat = fs.statSync(filePath);
+    const fileList = (list || []).map((file) => {
+      const { data: publicUrlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(file.name);
       return {
-        id: filename,
-        url: `/uploads/${filename}`,
-        listened: metadata.listened[filename] || false,
-        group: metadata.groups[filename] || "default",
-        size: stat.size,
-        uploadedAt: stat.mtime,
+        id: file.name,
+        url: publicUrlData.publicUrl,
+        listened: metadata.listened[file.name] || false,
+        group: metadata.groups[file.name] || "default",
+        size: file.metadata && file.metadata.size ? file.metadata.size : 0,
+        uploadedAt: file.updated_at || file.created_at || new Date(),
       };
     });
-
     // Sort by uploadedAt descending
-    fileList.sort((a, b) => b.uploadedAt - a.uploadedAt);
-
+    fileList.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
     res.json({ files: fileList });
   } catch (error) {
     res.status(500).json({ error: error.message });
