@@ -80,6 +80,88 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
 });
 
+const FILE_LIST_CACHE_TTL_MS = 3000;
+const bucketListCache = new Map();
+
+async function listAllBucketFiles(bucket) {
+  const metadata = readMetadata();
+  const files = [];
+  const pageSize = 1000;
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await supabase.storage.from(bucket).list("", {
+      limit: pageSize,
+      offset,
+      sortBy: { column: "name", order: "asc" },
+    });
+
+    if (error) throw error;
+
+    const page = data || [];
+    for (const file of page) {
+      const { data: publicUrlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(file.name);
+      files.push({
+        id: file.name,
+        url: publicUrlData.publicUrl,
+        listened: metadata.listened[file.name] || false,
+        group: metadata.groups[file.name] || "default",
+        size: file.metadata && file.metadata.size ? file.metadata.size : 0,
+        uploadedAt: file.updated_at || file.created_at || new Date(),
+      });
+    }
+
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+  return files;
+}
+
+async function getCachedBucketFiles(bucket, forceRefresh = false) {
+  const now = Date.now();
+  const cached = bucketListCache.get(bucket);
+
+  if (cached && !forceRefresh && now - cached.fetchedAt < FILE_LIST_CACHE_TTL_MS) {
+    return cached.files;
+  }
+
+  if (cached?.inFlight) {
+    return cached.files;
+  }
+
+  const entry = {
+    files: cached?.files || [],
+    fetchedAt: cached?.fetchedAt || 0,
+    inFlight: true,
+  };
+  bucketListCache.set(bucket, entry);
+
+  try {
+    const files = await listAllBucketFiles(bucket);
+    bucketListCache.set(bucket, {
+      files,
+      fetchedAt: Date.now(),
+      inFlight: false,
+    });
+    return files;
+  } catch (error) {
+    bucketListCache.set(bucket, {
+      files: entry.files,
+      fetchedAt: entry.fetchedAt,
+      inFlight: false,
+    });
+    throw error;
+  }
+}
+
+function invalidateBucketCache(bucket) {
+  bucketListCache.delete(bucket);
+}
+
 // API Routes
 
 // Upload audio to Supabase Storage
@@ -119,15 +201,9 @@ app.post("/api/upload", upload.single("audio"), async (req, res) => {
       /[^a-zA-Z0-9._-]/g,
       "_",
     );
-    const { data: existingList, error: listError } = await supabase.storage
-      .from(bucket)
-      .list("", { limit: 1000, offset: 0 });
-    if (listError) {
-      fs.unlinkSync(req.file.path);
-      return res.status(500).json({ error: listError.message });
-    }
-    const duplicateByName = (existingList || []).find((item) =>
-      item.name.endsWith(`_${sanitizedOriginal}`),
+    const existingFiles = await getCachedBucketFiles(bucket);
+    const duplicateByName = existingFiles.find((item) =>
+      item.id.endsWith(`_${sanitizedOriginal}`),
     );
     if (duplicateByName) {
       fs.unlinkSync(req.file.path);
@@ -161,6 +237,7 @@ app.post("/api/upload", upload.single("audio"), async (req, res) => {
     }
     metadata.hashes[supaPath] = fileHash;
     writeMetadata(metadata);
+    invalidateBucketCache(bucket);
     // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from(bucket)
@@ -184,24 +261,8 @@ app.post("/api/upload", upload.single("audio"), async (req, res) => {
 app.get("/api/files", async (req, res) => {
   try {
     const bucket = process.env.SUPABASE_BUCKET || "audio";
-    const { data: list, error } = await supabase.storage.from(bucket).list();
-    if (error) return res.status(500).json({ error: error.message });
-    const metadata = readMetadata();
-    const fileList = (list || []).map((file) => {
-      const { data: publicUrlData } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(file.name);
-      return {
-        id: file.name,
-        url: publicUrlData.publicUrl,
-        listened: metadata.listened[file.name] || false,
-        group: metadata.groups[file.name] || "default",
-        size: file.metadata && file.metadata.size ? file.metadata.size : 0,
-        uploadedAt: file.updated_at || file.created_at || new Date(),
-      };
-    });
-    // Sort by uploadedAt descending
-    fileList.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    const fileList = await getCachedBucketFiles(bucket);
+    res.set("Cache-Control", "no-store");
     res.json({ files: fileList });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -262,6 +323,7 @@ app.delete("/api/files/:id", async (req, res) => {
     delete metadata.groups[id];
     delete metadata.hashes[id];
     writeMetadata(metadata);
+    invalidateBucketCache(bucket);
 
     res.json({ success: true, id });
   } catch (error) {
@@ -309,6 +371,7 @@ app.post("/api/rename/:id", (req, res) => {
     }
 
     writeMetadata(metadata);
+    invalidateBucketCache(process.env.SUPABASE_BUCKET || "audio");
     res.json({ success: true, id: newId, oldId: id });
   } catch (error) {
     res.status(500).json({ error: error.message });
