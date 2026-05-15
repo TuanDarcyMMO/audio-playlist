@@ -176,6 +176,48 @@ app.delete("/api/files/:id", (req, res) => {
   res.json({ success: true, id });
 });
 
+// Rename file
+app.post("/api/rename/:id", (req, res) => {
+  const { id } = req.params;
+  const { newName } = req.body;
+
+  if (!newName || typeof newName !== "string") {
+    return res.status(400).json({ error: "Invalid new name" });
+  }
+
+  const oldPath = path.join(uploadsDir, id);
+
+  if (!fs.existsSync(oldPath)) {
+    return res.status(404).json({ error: "File not found" });
+  }
+
+  const timestamp = id.split("_")[0];
+  const ext = path.extname(id);
+  const sanitized = newName.trim().replace(/[^a-zA-Z0-9._-\s]/g, "_");
+  const newId = `${timestamp}_${sanitized}${ext}`;
+  const newPath = path.join(uploadsDir, newId);
+
+  try {
+    fs.renameSync(oldPath, newPath);
+    const metadata = readMetadata();
+
+    // Update metadata with new id
+    if (metadata.listened[id]) {
+      metadata.listened[newId] = metadata.listened[id];
+      delete metadata.listened[id];
+    }
+    if (metadata.groups[id]) {
+      metadata.groups[newId] = metadata.groups[id];
+      delete metadata.groups[id];
+    }
+
+    writeMetadata(metadata);
+    res.json({ success: true, id: newId, oldId: id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Audio playlist server running at http://localhost:${PORT}`);

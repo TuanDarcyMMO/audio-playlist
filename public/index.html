@@ -55,26 +55,67 @@
         font-size: 14px;
       }
 
-      .upload-zone {
+      .upload-section {
         background: var(--card);
-        border: 2px dashed var(--primary);
+        padding: 16px;
         border-radius: 12px;
-        padding: 32px 16px;
-        text-align: center;
-        cursor: pointer;
         margin-bottom: 20px;
-        transition: all 0.2s;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
-      .upload-zone:hover {
+      .upload-buttons {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .upload-btn {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px dashed var(--primary);
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--primary);
+      }
+
+      .upload-btn:hover {
         border-color: #0856c0;
         background: #f8faff;
       }
 
-      .upload-zone.dragover {
+      .upload-btn.dragover {
         border-color: var(--success);
         background: #f0fdf4;
+        color: var(--success);
+      }
+
+      .upload-btn input {
+        display: none;
+      }
+
+      .upload-zone {
+        background: linear-gradient(135deg, #f8faff 0%, #eff6ff 100%);
+        border: 2px dashed var(--primary);
+        border-radius: 8px;
+        padding: 24px 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .upload-zone:hover {
+        border-color: #0856c0;
+        background: linear-gradient(135deg, #f0f8ff 0%, #e8f2ff 100%);
+      }
+
+      .upload-zone.dragover {
+        border-color: var(--success);
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
       }
 
       .upload-zone input {
@@ -123,7 +164,7 @@
         border-bottom: 1px solid #f3f4f6;
         display: flex;
         gap: 12px;
-        align-items: center;
+        align-items: flex-start;
         transition: background 0.2s;
       }
 
@@ -140,6 +181,8 @@
         height: 20px;
         cursor: pointer;
         accent-color: var(--primary);
+        flex-shrink: 0;
+        margin-top: 2px;
       }
 
       .track-info {
@@ -153,50 +196,69 @@
         color: var(--text);
         word-break: break-word;
         margin-bottom: 4px;
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+
+      .track-name:hover {
+        background: #eff6ff;
+        color: var(--primary);
+      }
+
+      .track-name-input {
+        width: 100%;
+        padding: 4px 6px;
+        font-size: 13px;
+        border: 1px solid var(--primary);
+        border-radius: 4px;
+        outline: none;
+        font-family: inherit;
+      }
+
+      .track-name-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(11, 119, 242, 0.1);
       }
 
       .track-meta {
         font-size: 12px;
         color: var(--muted);
         display: flex;
-        gap: 12px;
+        gap: 8px;
         flex-wrap: wrap;
+        align-items: center;
       }
 
-      .track-group {
-        display: inline-block;
+      .track-size {
+        background: #f0f0f0;
         padding: 2px 6px;
+        border-radius: 3px;
+      }
+
+      .track-group-select {
+        padding: 3px 6px;
+        font-size: 11px;
+        border: 1px solid #bfdbfe;
+        border-radius: 4px;
         background: #eff6ff;
         color: var(--primary);
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 500;
         cursor: pointer;
-        border: 1px solid #bfdbfe;
+        outline: none;
         transition: all 0.2s;
       }
 
-      .track-group:hover {
+      .track-group-select:hover,
+      .track-group-select:focus {
         background: #dbeafe;
-      }
-
-      .track-group-input {
-        width: 100px;
-        padding: 2px 6px;
-        font-size: 11px;
-        border: 1px solid var(--primary);
-        border-radius: 4px;
-        outline: none;
-      }
-
-      .track-group-input:focus {
         border-color: var(--primary);
-        box-shadow: 0 0 0 2px rgba(11, 119, 242, 0.1);
       }
 
       .track-actions {
         display: flex;
-        gap: 8px;
+        gap: 6px;
+        flex-shrink: 0;
       }
 
       .btn-small {
@@ -236,6 +298,87 @@
 
       .btn-play:hover {
         background: #0856c0;
+      }
+
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal {
+        background: var(--card);
+        padding: 20px;
+        border-radius: 12px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      .modal h2 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        color: var(--text);
+      }
+
+      .modal-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 14px;
+        margin-bottom: 16px;
+        outline: none;
+        font-family: inherit;
+      }
+
+      .modal-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(11, 119, 242, 0.1);
+      }
+
+      .modal-buttons {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+      }
+
+      .modal-btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+
+      .modal-btn.primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      .modal-btn.primary:hover {
+        background: #0856c0;
+      }
+
+      .modal-btn.secondary {
+        background: #e5e7eb;
+        color: var(--text);
+      }
+
+      .modal-btn.secondary:hover {
+        background: #d1d5db;
       }
 
       .player {
@@ -290,6 +433,32 @@
           font-size: 20px;
         }
 
+        .header p {
+          font-size: 13px;
+        }
+
+        .upload-buttons {
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .upload-btn {
+          padding: 10px 12px;
+          font-size: 12px;
+        }
+
+        .upload-zone {
+          padding: 20px 12px;
+        }
+
+        .upload-icon {
+          font-size: 28px;
+        }
+
+        .upload-text {
+          font-size: 12px;
+        }
+
         .track {
           padding: 10px 12px;
           gap: 10px;
@@ -299,8 +468,43 @@
           font-size: 12px;
         }
 
-        .upload-zone {
-          padding: 24px 12px;
+        .track-meta {
+          font-size: 11px;
+          gap: 6px;
+        }
+
+        .track-size {
+          padding: 1px 4px;
+          font-size: 10px;
+        }
+
+        .track-actions {
+          gap: 4px;
+        }
+
+        .btn-small,
+        .btn-play {
+          padding: 3px 6px;
+          font-size: 11px;
+        }
+
+        .player {
+          padding: 10px;
+        }
+
+        .player-title {
+          font-size: 11px;
+          margin-bottom: 6px;
+        }
+
+        .player audio {
+          height: 35px;
+        }
+
+        .stats {
+          font-size: 11px;
+          margin-top: 6px;
+          padding-top: 6px;
         }
       }
 
@@ -317,13 +521,26 @@
         <p id="stats">Đang tải...</p>
       </div>
 
-      <div class="upload-zone" id="uploadZone">
-        <div class="upload-icon">📁</div>
-        <div class="upload-text">
-          <strong>Kéo thả audio vào đây</strong><br />
-          hoặc click để chọn file (MP3, WAV, M4A, AAC)
+      <div class="upload-section">
+        <div class="upload-buttons">
+          <div class="upload-btn" id="uploadZone">
+            📁 Kéo thả file<br />
+            <span style="font-size: 11px; font-weight: normal">(MP3, MP4)</span>
+            <input type="file" id="fileInput" accept=".mp3,.m4a,.wav,.ogg,.aac,.mp4" multiple />
+          </div>
+          <div class="upload-btn" id="uploadFolder">
+            📂 Upload folder<br />
+            <span style="font-size: 11px; font-weight: normal">(Auto filter)</span>
+            <input type="file" id="folderInput" webkitdirectory directory />
+          </div>
         </div>
-        <input type="file" id="fileInput" accept="audio/*" multiple />
+        <div class="upload-zone" id="dragZone">
+          <div class="upload-icon">⬇️</div>
+          <div class="upload-text">
+            <strong>Hoặc kéo thả file/folder vào đây</strong><br />
+            Hỗ trợ: MP3, MP4, WAV, M4A, AAC, OGG
+          </div>
+        </div>
       </div>
 
       <div class="playlist" id="playlist">
@@ -338,49 +555,117 @@
       <div class="stats" id="playerStats"></div>
     </div>
 
+    <div class="modal-overlay" id="renameModal">
+      <div class="modal">
+        <h2>📝 Đổi tên file</h2>
+        <input type="text" id="renameInput" class="modal-input" placeholder="Tên file mới" />
+        <div class="modal-buttons">
+          <button class="modal-btn secondary" onclick="closeRenameModal()">Hủy</button>
+          <button class="modal-btn primary" onclick="saveRename()">Lưu</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       const uploadZone = document.getElementById("uploadZone");
+      const uploadFolder = document.getElementById("uploadFolder");
+      const dragZone = document.getElementById("dragZone");
       const fileInput = document.getElementById("fileInput");
+      const folderInput = document.getElementById("folderInput");
       const playlist = document.getElementById("playlist");
       const player = document.getElementById("player");
       const audioPlayer = document.getElementById("audioPlayer");
       const playerTitle = document.getElementById("playerTitle");
       const stats = document.getElementById("stats");
-      const playerStats = document.getElementById("playerStats");
+      const renameModal = document.getElementById("renameModal");
+      const renameInput = document.getElementById("renameInput");
+
+      let currentRenameId = null;
+      const GROUPS = ["TuanDarcy", "Meridiem"];
+      const AUDIO_EXTENSIONS = [".mp3", ".m4a", ".wav", ".ogg", ".aac", ".mp4"];
 
       // Drag and drop
-      uploadZone.addEventListener("dragover", (e) => {
+      dragZone.addEventListener("dragover", (e) => {
         e.preventDefault();
+        dragZone.classList.add("dragover");
         uploadZone.classList.add("dragover");
       });
 
-      uploadZone.addEventListener("dragleave", () => {
+      dragZone.addEventListener("dragleave", () => {
+        dragZone.classList.remove("dragover");
         uploadZone.classList.remove("dragover");
       });
 
-      uploadZone.addEventListener("drop", (e) => {
+      dragZone.addEventListener("drop", (e) => {
         e.preventDefault();
+        dragZone.classList.remove("dragover");
         uploadZone.classList.remove("dragover");
-        handleFiles(e.dataTransfer.files);
+        handleFiles(e.dataTransfer.items || e.dataTransfer.files);
       });
 
       uploadZone.addEventListener("click", () => fileInput.click());
+      uploadFolder.addEventListener("click", () => folderInput.click());
       fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+      folderInput.addEventListener("change", (e) => handleFiles(e.target.files));
 
-      async function handleFiles(files) {
+      async function handleFiles(items) {
+        dragZone.classList.add("loading");
         uploadZone.classList.add("loading");
-        for (const file of files) {
+        uploadFolder.classList.add("loading");
+
+        const files = [];
+
+        // Handle DataTransferItemList (from drag-drop)
+        if (items && items[0] && items[0].getAsEntry) {
+          for (let item of items) {
+            const entry = item.getAsEntry();
+            if (entry.isFile) {
+              files.push(item.getAsFile());
+            } else if (entry.isDirectory) {
+              await traverseDirectory(entry, files);
+            }
+          }
+        } else {
+          // Handle FileList (from input)
+          for (let file of items) {
+            files.push(file);
+          }
+        }
+
+        // Filter audio files
+        const audioFiles = files.filter((file) => {
+          const ext = "." + file.name.split(".").pop().toLowerCase();
+          return AUDIO_EXTENSIONS.includes(ext);
+        });
+
+        // Upload filtered files
+        for (const file of audioFiles) {
           const formData = new FormData();
           formData.append("audio", file);
           try {
             await fetch("/api/upload", { method: "POST", body: formData });
           } catch (error) {
             console.error("Upload error:", error);
-            alert("Lỗi: " + error.message);
           }
         }
+
+        dragZone.classList.remove("loading");
         uploadZone.classList.remove("loading");
+        uploadFolder.classList.remove("loading");
         loadPlaylist();
+      }
+
+      async function traverseDirectory(entry, files) {
+        if (entry.isFile) {
+          const file = await new Promise((resolve) => entry.file(resolve));
+          files.push(file);
+        } else if (entry.isDirectory) {
+          const reader = entry.createReader();
+          const entries = await new Promise((resolve) => reader.readEntries(resolve));
+          for (let e of entries) {
+            await traverseDirectory(e, files);
+          }
+        }
       }
 
       async function loadPlaylist() {
@@ -401,15 +686,19 @@
           let html = '<div class="playlist-header">Danh sách audio</div>';
           for (const file of files) {
             const name = file.id.replace(/^\d+_/, "");
+            const currentGroup = file.group || GROUPS[0];
+
             html += `
             <div class="track">
               <input type="checkbox" class="track-checkbox" ${file.listened ? "checked" : ""} 
                 onchange="toggleListened('${escapeHtml(file.id)}', this.checked)">
               <div class="track-info">
-                <div class="track-name">${escapeHtml(name)}</div>
+                <div class="track-name" onclick="openRenameModal('${escapeHtml(file.id)}', '${escapeHtml(name)}')">${escapeHtml(name)}</div>
                 <div class="track-meta">
-                  <span>${formatSize(file.size)}</span>
-                  <span class="track-group" onclick="editGroup(event, '${escapeHtml(file.id)}')">${escapeHtml(file.group)}</span>
+                  <span class="track-size">${formatSize(file.size)}</span>
+                  <select class="track-group-select" onchange="changeGroup('${escapeHtml(file.id)}', this.value)">
+                    ${GROUPS.map((g) => `<option value="${escapeHtml(g)}" ${g === currentGroup ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+                  </select>
                 </div>
               </div>
               <div class="track-actions">
@@ -459,40 +748,61 @@
         }
       }
 
-      function editGroup(event, id) {
-        event.stopPropagation();
-        const span = event.target;
-        const currentGroup = span.textContent;
-        const input = document.createElement("input");
-        input.className = "track-group-input";
-        input.type = "text";
-        input.value = currentGroup;
-        input.maxLength = 30;
-
-        const save = async () => {
-          const newGroup = input.value.trim() || "default";
-          try {
-            await fetch(`/api/group/${id}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ group: newGroup }),
-            });
-            loadPlaylist();
-          } catch (error) {
-            console.error("Error:", error);
-          }
-        };
-
-        input.onblur = save;
-        input.onkeydown = (e) => {
-          if (e.key === "Enter") save();
-          if (e.key === "Escape") loadPlaylist();
-        };
-
-        span.replaceWith(input);
-        input.focus();
-        input.select();
+      async function changeGroup(id, group) {
+        try {
+          await fetch(`/api/group/${id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ group }),
+          });
+          loadPlaylist();
+        } catch (error) {
+          console.error("Error:", error);
+        }
       }
+
+      function openRenameModal(id, currentName) {
+        currentRenameId = id;
+        renameInput.value = currentName;
+        renameModal.classList.add("active");
+        renameInput.focus();
+        renameInput.select();
+      }
+
+      function closeRenameModal() {
+        renameModal.classList.remove("active");
+        currentRenameId = null;
+        renameInput.value = "";
+      }
+
+      async function saveRename() {
+        if (!currentRenameId || !renameInput.value.trim()) {
+          closeRenameModal();
+          return;
+        }
+
+        try {
+          await fetch(`/api/rename/${currentRenameId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newName: renameInput.value.trim() }),
+          });
+          closeRenameModal();
+          loadPlaylist();
+        } catch (error) {
+          console.error("Error:", error);
+          alert("Lỗi đổi tên file");
+        }
+      }
+
+      renameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") saveRename();
+        if (e.key === "Escape") closeRenameModal();
+      });
+
+      renameModal.addEventListener("click", (e) => {
+        if (e.target === renameModal) closeRenameModal();
+      });
 
       async function deleteFile(id) {
         if (confirm("Xóa file này?")) {
